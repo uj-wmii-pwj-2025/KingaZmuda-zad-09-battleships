@@ -1,0 +1,21 @@
+services:
+  server:
+    build: .
+    container_name: battleships-server
+    ports:
+      - "12345:12345"
+    command: java -cp battleships-1.0.0.jar kingazm.net.Server -mode server -port 12345
+
+  client:
+    build: .
+    container_name: battleships-client
+    depends_on:
+      - server
+    command: java -cp battleships-1.0.0.jar kingazm.net.Client -mode client -host server -port 12345
+
+  client2:
+    build: .
+    container_name: battleships-client2
+    depends_on:
+      - server
+    command: java -cp battleships-1.0.0.jar kingazm.net.Client -mode client -host server -port 12345
