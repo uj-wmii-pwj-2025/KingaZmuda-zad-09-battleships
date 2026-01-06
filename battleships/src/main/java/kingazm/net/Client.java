@@ -1,34 +1,53 @@
 package kingazm.net;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Map;
+import kingazm.board.BoardConfig;
+
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 /**
  * Simple interactive TCP client used for testing the server.
  * It connects to a server, starts a background reader thread to print incoming lines,
  * and reads lines from stdin to send to the server.
- *
- * The client uses consoleLock to synchronize printing between the
- * background reader thread and the stdin prompt so output doesn't interleave and
- * the prompt can be cleared/reprinted cleanly when incoming messages arrive.
  */
 public class Client {
-    private String clientName;
-    private String host;
-    private int port;
 
+    static {
+        Logger root = Logger.getLogger("");
+        Handler[] handlers = root.getHandlers();
+        for (Handler h : handlers) {
+            h.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    return record.getLevel() + ": " + record.getMessage() + System.lineSeparator();
+                }
+            });
+        }
+    }
+
+    private final String clientName;
+    private final String host;
+    private final int port;
     private static final Logger logger = Logger.getLogger(Client.class.getName());
-
     private static final Object consoleLock = new Object();
-    private volatile boolean promptShown = false;
+    private volatile boolean myTurn = false;
+    private volatile boolean gameOver = false;
+    private String myClientId = null;
+    private final Set<String> shotCoordinates = new HashSet<>();
+    private static final int COLS = BoardConfig.COLS;
 
     /**
      * Create a client with a random auto-generated name to keep track
@@ -39,28 +58,6 @@ public class Client {
         this.host = host;
         this.port = port;
         this.clientName = "Client-" + UUID.randomUUID().toString().substring(0, 8);
-    }
-
-    private void printPrompt() {
-        synchronized (consoleLock) {
-            // keep prompt printing as System.out to allow printing without newline
-            System.out.print("You: ");
-            System.out.flush();
-            promptShown = true;
-        }
-    }
-
-    /**
-     * Clear a previously printed prompt line for clean output sequence from each
-     * client's perspective.
-     */
-    private void clearPromptLine() {
-        synchronized (consoleLock) {
-            System.out.print("\r");
-            System.out.print("\r");
-            System.out.flush();
-            promptShown = false;
-        }
     }
 
     /**
@@ -76,34 +73,170 @@ public class Client {
 
             logger.info("Connected to " + host + ":" + port);
 
-            Thread readerThread = new Thread(() -> {
-                try {
-                    String line;
-                    while ((line = socketReader.readLine()) != null) {
-                        if (promptShown) {
-                            clearPromptLine();
-                        }
-                        synchronized (consoleLock) {
-                            logger.info(clientName + " : " + line);
-                        }
-                        printPrompt();
-                    }
-                } catch (IOException e) {
-                    logger.log(Level.SEVERE, "Error reading from server", e);
-                }
-            }, "socket-reader");
-            readerThread.setDaemon(true);
+            Thread readerThread = startServerListener(socketReader);
             readerThread.start();
 
-            String input;
-            printPrompt();
-            while ((input = stdin.readLine()) != null) {
-                promptShown = false;
-                out.println(input);
-                printPrompt();
+            handleUserInput(stdin, out);
+            logger.info("Input closed, client exiting");
+        }
+    }
+
+    private Thread startServerListener(BufferedReader socketReader) {
+        Runnable readerTask = () -> {
+            try {
+                String line;
+                while ((line = socketReader.readLine()) != null) {
+                    synchronized (consoleLock) {
+                        handleServerMessage(line);
+                    }
+                }
+            } catch (IOException e) {
+                logger.log(Level.SEVERE, "Error reading from server", e);
+            }
+        };
+
+        Thread readerThread = new Thread(readerTask, "socket-reader");
+        readerThread.setDaemon(true);
+        return readerThread;
+    }
+
+    private void handleServerMessage(String line) {
+        if (line == null) {
+            return;
+        }
+
+        String up = line.toUpperCase();
+        String command = up.contains(";")
+                ? up.substring(0, up.indexOf(';') + 1)
+                : up;
+
+        switch (command) {
+
+            case "UI;" -> {
+                System.out.println(line.substring(3));
             }
 
-            logger.info("Input closed, client exiting");
+            case "MAP;" -> {
+                showBoard(line.substring(4), null);
+            }
+
+            case "OPP_MAP;" -> {
+                showBoard(line.substring(8), "Plansza przeciwnika:");
+            }
+
+            case "START;" -> {
+                String[] parts = line.split(";", 3);
+                if (parts.length >= 3) {
+                    myClientId = parts[2];
+                }
+            }
+
+            case "TURA;", "TURN;" -> {
+                handleTurnMessage(line);
+            }
+
+            case "INFO;" -> {
+                String infoMsg = line.substring(5).trim();
+                if (!"oczekiwanie na ruch przeciwnika".equalsIgnoreCase(infoMsg)) {
+                    System.out.println(infoMsg);
+                }
+            }
+
+            case "STATUS;" -> {
+                String statusMsg = line.substring(7).trim();
+                if (!"twoja tura".equalsIgnoreCase(statusMsg)
+                    && !"czekaj".equalsIgnoreCase(statusMsg)) {
+                    System.out.println(statusMsg);
+                }
+            }
+
+            case "TRAFIONY;" -> {
+                printHitMessage(extractCoordinate(line));
+            }
+
+            case "PUDŁO;" -> {
+                printMissMessage(extractCoordinate(line));
+            }
+
+            case "WYNIK;" -> {
+                String result = line.substring(line.indexOf(';') + 1).trim();
+                printEndMessage(result);
+                gameOver = true;
+            }
+
+            case "MOVE;" -> {
+                printMove(line);
+            }
+
+            default -> {
+                System.out.println(line);
+            }
+        }
+    }
+
+    private void handleTurnMessage(String line) {
+        String whose = line.substring(line.indexOf(';') + 1);
+        boolean nowMine = myClientId != null && myClientId.equals(whose);
+        myTurn = nowMine;
+        if (myTurn) {
+            System.out.println("\nTwoja tura. Podaj współrzędne (np. A1):");
+        } else {
+            System.out.println("\nCzekaj na ruch przeciwnika...");
+        }
+    }
+
+    private String extractCoordinate(String line) {
+        String[] parts = line.split(";");
+        return parts.length >= 2 ? parts[1].trim().toUpperCase() : "";
+    }
+
+    private void showBoard(String map, String header) {
+        if (header != null && !header.isEmpty()) {
+            System.out.println(header);
+        }
+
+        for (int idx = 0; idx + COLS <= map.length(); idx += COLS) {
+            System.out.println(map.substring(idx, idx + COLS));
+        }
+    }
+
+    private void handleUserInput(BufferedReader stdin, PrintWriter out) throws IOException {
+        String input;
+
+        while ((input = stdin.readLine()) != null) {
+
+            if (gameOver) {
+                return;
+            }
+
+            String trimmed = input.trim();
+
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+
+            if (shouldExit(trimmed)) {
+                return;
+            }
+
+            if (!myTurn) {
+                synchronized (consoleLock) {
+                    System.out.println("Nie twoja tura. Poczekaj na ruch przeciwnika.");
+                }
+                continue;
+            }
+
+            String coord = trimmed.toUpperCase();
+
+            if (shotCoordinates.contains(coord)) {
+                synchronized (consoleLock) {
+                    System.out.println("To pole było już ostrzelane. Podaj inną współrzędną:");
+                }
+                continue;
+            }
+
+            out.println(coord);
+            shotCoordinates.add(coord);
         }
     }
 
@@ -191,7 +324,6 @@ public class Client {
         }
     }
 
-
     public static void main(String[] args) {
         Map<String, String> config = processArgs(args);
 
@@ -209,5 +341,44 @@ public class Client {
             logger.severe("Unable to connect after " + retries + " attempts.");
             System.exit(1);
         }
+    }
+
+    private void printEndMessage(String result) {
+        System.out.printf("""
+                    
+                    =====================================
+                                  KONIEC GRY!
+                                    WYNIK:
+                                     %s
+                    =====================================
+                    """, result);
+    }
+
+    private void printMissMessage(String coord) {
+        System.out.printf("""
+                    
+                    =================================================
+                                          PUDŁO!
+                                            %s
+                    =================================================
+                    """, coord);
+    }
+
+    private void printHitMessage(String coord) {
+        System.out.printf("""
+                    
+                    =================================================
+                                        TRAFIONY!
+                                           %s
+                    =================================================
+                    """, coord);
+    }
+
+    private void printMove(String moveLine) {
+        System.out.println(moveLine.replace(';', ' '));
+    }
+
+    private boolean shouldExit(String trimmed) {
+        return "q".equalsIgnoreCase(trimmed);
     }
 }

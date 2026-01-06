@@ -3,8 +3,8 @@ package kingazm.board;
 import java.util.Random;
 
 public class RandomBoardGenerator implements BoardGenerator {
-    private final char MAST = config.MAST;
-    private final char WATER = config.WATER;
+    private final char MAST = BoardConfig.MAST;
+    private final char WATER = BoardConfig.WATER;
     private final int NUM_OF_COLS;
     private final int NUM_OF_ROWS;
     char[][] board;
@@ -138,4 +138,13 @@ public class RandomBoardGenerator implements BoardGenerator {
     private boolean isWithinBounds(int x, int y) {
         return (x >= 0 && x < NUM_OF_COLS && y >= 0 && y < NUM_OF_ROWS);
     }
+
+    public void printBoard() {
+        for (int i = 0; i < NUM_OF_COLS; i++) {
+            for (int j = 0; j < NUM_OF_ROWS; j++) {
+                System.out.print(board[i][j]);
+            }
+            System.out.println();
+        }
+    }   
 }
