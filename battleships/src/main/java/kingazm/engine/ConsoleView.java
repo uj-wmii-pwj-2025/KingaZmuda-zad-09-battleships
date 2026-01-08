@@ -20,20 +20,20 @@ public class ConsoleView {
      */
     public String renderFor(String playerId) {
         String myFull = gameLoop.getBoardFor(playerId);
-        String opponentMasked = gameLoop.getMaskedOpponentView(playerId);
+        String opponentRevealed = gameLoop.getRevealedOpponentView(playerId);
 
         if (myFull == null) myFull = "(brak planszy)";
-        if (opponentMasked == null) opponentMasked = "(brak planszy)";
+        if (opponentRevealed == null) opponentRevealed = "(brak planszy)";
 
         String[] leftLines = myFull.split("\n");
-        String[] rightLines = opponentMasked.split("\n");
+        String[] rightLines = opponentRevealed.split("\n");
 
         int leftWidth = 0;
         for (String s : leftLines) leftWidth = Math.max(leftWidth, s.length());
 
         List<String> out = getStrings(rightLines, leftLines, leftWidth);
 
-        return String.join("\n", out) + "\n\n";
+        return String.join("\n", out) + "\n\n\n";
     }
 
     private static List<String> getStrings(String[] rightLines, String[] leftLines, int leftWidth) {

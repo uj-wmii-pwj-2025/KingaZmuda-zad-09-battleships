@@ -54,6 +54,12 @@ public class GameLoop {
         return bs == null ? null : bs.maskedView();
     }
 
+    public String getRevealedOpponentView(String playerId) {
+        Player opponent = playerA.getId().equals(playerId) ? playerB : playerA;
+        BoardState bs = opponent.getBoard();
+        return bs == null ? null : bs.revealedView();
+    }
+
     public String getCurrentTurn() {
         return currentTurn;
     }

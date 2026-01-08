@@ -461,6 +461,11 @@ public class Server {
 
     private void broadcastStartMessage(Player me, Player peer) {
         broadcast(me, peer, """
+
+
+
+
+
                             ╔═══════════════════════════════════════════════╗
                             ║                   START GRY                   ║
                             ╚═══════════════════════════════════════════════╝

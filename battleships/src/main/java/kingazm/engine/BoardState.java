@@ -98,6 +98,41 @@ public class BoardState {
         return sb.toString();
     }
 
+    public synchronized String revealedView() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("   ");
+        for (int c = 0; c < cols; c++) {
+            sb.append((char)('A' + c));
+            if (c < cols - 1) {
+                sb.append(' ');
+            }
+        }
+        sb.append('\n');
+
+        for (int r = 0; r < rows; r++) {
+            String rowLabel = Integer.toString(r + 1);
+            if (rowLabel.length() == 1) {
+                sb.append(' ');
+            }
+            sb.append(rowLabel).append(' ');
+
+            for (int c = 0; c < cols; c++) {
+                char ch = currentBoard[r][c];
+                char out = switch (ch) {
+                    case HIT -> MAST;      // Show the ship that was hit
+                    case MISS -> WATER;    // Show the water that was hit
+                    default -> UNKNOWN;    // Show unknown for places not yet shot
+                };
+                sb.append(out);
+                if (c < cols - 1) {
+                    sb.append(' ');
+                }
+            }
+            sb.append('\n');
+        }
+        return sb.toString();
+    }
+
     public synchronized String fullView() {
         StringBuilder sb = new StringBuilder();
         sb.append("   ");

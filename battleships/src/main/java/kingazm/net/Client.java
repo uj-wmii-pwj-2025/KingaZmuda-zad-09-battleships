@@ -376,7 +376,7 @@ public class Client {
                     ║                                                 ║
                     ║                     WYGRANA!                    ║
                     ║                                                 ║
-                    ║              Gratulacje! Wygrałeś grę!          ║
+                    ║              Gratulacje! Wygrałxś grę!          ║
                     ║                                                 ║
                     ║           Naciśnij Enter, aby zakończyć...      ║
                     ║                                                 ║
@@ -389,7 +389,7 @@ public class Client {
                     ║                                                 ║
                     ║                     PRZEGRANA                   ║
                     ║                                                 ║
-                    ║           Niestety, przegrałeś grę...           ║
+                    ║           Niestety, przegrałxś grę...           ║
                     ║                                                 ║
                     ║           Naciśnij Enter, aby zakończyć...      ║
                     ║                                                 ║
@@ -407,6 +407,10 @@ public class Client {
         
         System.out.printf("""
                     
+
+
+
+
                     ╔═════════════════════════════════════════════════╗
                     ║                     PUDŁO!                      ║ 
                     ║%s%s%s║
@@ -423,6 +427,10 @@ public class Client {
         
         System.out.printf("""
                     
+
+
+
+
                     ╔═════════════════════════════════════════════════╗
                     ║                    TRAFIONY!                    ║ 
                     ║%s%s%s║
