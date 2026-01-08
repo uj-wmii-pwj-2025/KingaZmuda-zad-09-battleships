@@ -7,6 +7,15 @@ public class Manual {
             "║                         PODRĘCZNIK GRY - OKRĘTY WOJENNE                        ║\n" +
             "╚════════════════════════════════════════════════════════════════════════════════╝\n\n" +
 
+            "█ SZYBKI START:\n" +
+            "Używajac konsoli, wykonaj następujące kroki:\n" +
+            "  Linux/Mac:\n" +
+            "  - Uruchom skrypt start-server.sh\n" +
+            "  - Uruchom dwa razy (w osobnych oknach) skrypt start-client.sh\n" +
+            "  Windows:\n" +
+            "  - Uruchom start-server.bat\n" +
+            "  - Uruchom dwa razy (w osobnych oknach) start-client.bat\n\n" +
+
             "█ CEL GRY:\n" +
             "  Zatopić wszystkie statki przeciwnika poprzez celne strzały zanim on zatopi\n" +
             "  Twoje statki. Gra jest przeznaczona dla dwóch graczy.\n\n" +
@@ -19,10 +28,11 @@ public class Manual {
             "  - Gracz może oddać strzał na turę\n\n" +
 
             "█ ROZPOCZĘCIE GRY:\n" +
+            "Użyj instrukcji z sekcji SZYBKI START lub postępuj zgodnie z poniższymi krokami:\n" +
             "  1. Uruchom serwer na porcie (domyślnie na porcie 12345)\n" +
             "  2. Podłącz dwóch klientów:\n" +
             "     $ java kingazm.net.Client -host localhost -port 12345\n" +
-            "  3. Serwer automatycznie sparuje graczy, gdy dojdzie drugi\n" +
+            "  3. Serwer automatycznie sparuje graczy, gdy dojdzie drugi\n\n" +
 
             " SPOSÓB GRY:\n" +
             "  - Wpisz współrzędne w formacie: A1, B5, J10 itd.\n" +
@@ -48,6 +58,7 @@ public class Manual {
             "█ OPCJE SERWERA:\n" +
             "  - -port <numer>  - Zmień port (domyślnie 12345)\n" +
             "  - Przykład: java Server -port 9999\n\n" +
+
             "█ OPCJE KLIENTA:\n" +
             "  - -host <adres>      - Adres serwera (domyślnie localhost)\n" +
             "  - -port <numer>      - Port serwera (domyślnie 12345)\n" +
