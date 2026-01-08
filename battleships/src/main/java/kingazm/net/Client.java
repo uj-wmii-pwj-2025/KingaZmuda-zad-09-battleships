@@ -47,6 +47,7 @@ public class Client {
     private volatile boolean gameOver = false;
     private String myClientId = null;
     private final Set<String> shotCoordinates = new HashSet<>();
+    private boolean firstMove = true;
     private static final int COLS = BoardConfig.COLS;
 
     /**
@@ -151,15 +152,27 @@ public class Client {
             }
 
             case "TRAFIONY;" -> {
-                printHitMessage(extractCoordinate(line));
+                String coord = extractCoordinate(line);
+                String message = line.substring(line.indexOf(';') + 1).trim();
+                if (message.toLowerCase().contains("zatopiony")) {
+                    System.out.println("< " + message);
+                } else {
+                    System.out.println("< trafiony;" + coord);
+                }
+                printHitMessage(coord);
             }
 
             case "PUDŁO;" -> {
-                printMissMessage(extractCoordinate(line));
+                String coord = extractCoordinate(line);
+                System.out.println("< pudło;" + coord);
+                printMissMessage(coord);
             }
 
             case "WYNIK;" -> {
                 String result = line.substring(line.indexOf(';') + 1).trim();
+                if ("wygrana".equalsIgnoreCase(result.trim())) {
+                    System.out.println("< ostatni zatopiony");
+                }
                 printEndMessage(result);
                 gameOver = true;
             }
@@ -236,6 +249,16 @@ public class Client {
             }
 
             out.println(coord);
+            
+            synchronized (consoleLock) {
+                if (firstMove) {
+                    System.out.println("> start;" + coord);
+                    firstMove = false;
+                } else {
+                    System.out.println("> " + coord);
+                }
+            }
+            
             shotCoordinates.add(coord);
         }
     }
@@ -344,34 +367,67 @@ public class Client {
     }
 
     private void printEndMessage(String result) {
-        System.out.printf("""
+        boolean isWin = "wygrana".equalsIgnoreCase(result.trim());
+        
+        if (isWin) {
+            System.out.println("""
                     
-                    =====================================
-                                  KONIEC GRY!
-                                    WYNIK:
-                                     %s
-                    =====================================
-                    """, result);
+                    ╔═════════════════════════════════════════════════╗
+                    ║                                                 ║
+                    ║                     WYGRANA!                    ║
+                    ║                                                 ║
+                    ║              Gratulacje! Wygrałeś grę!          ║
+                    ║                                                 ║
+                    ║           Naciśnij Enter, aby zakończyć...      ║
+                    ║                                                 ║
+                    ╚═════════════════════════════════════════════════╝
+                    """);
+        } else {
+            System.out.println("""
+                    
+                    ╔═════════════════════════════════════════════════╗
+                    ║                                                 ║
+                    ║                     PRZEGRANA                   ║
+                    ║                                                 ║
+                    ║           Niestety, przegrałeś grę...           ║
+                    ║                                                 ║
+                    ║           Naciśnij Enter, aby zakończyć...      ║
+                    ║                                                 ║
+                    ╚═════════════════════════════════════════════════╝
+                    """);
+        }
     }
 
     private void printMissMessage(String coord) {
+        int totalWidth = 49;
+        int coordWidth = coord.length();
+        int padding = (totalWidth - coordWidth) / 2;
+        String leftPad = " ".repeat(padding);
+        String rightPad = " ".repeat(totalWidth - coordWidth - padding);
+        
         System.out.printf("""
                     
-                    =================================================
-                                          PUDŁO!
-                                            %s
-                    =================================================
-                    """, coord);
+                    ╔═════════════════════════════════════════════════╗
+                    ║                     PUDŁO!                      ║ 
+                    ║%s%s%s║
+                    ╚═════════════════════════════════════════════════╝
+                    """, leftPad, coord, rightPad);
     }
 
     private void printHitMessage(String coord) {
+        int totalWidth = 49;
+        int coordWidth = coord.length();
+        int padding = (totalWidth - coordWidth) / 2;
+        String leftPad = " ".repeat(padding);
+        String rightPad = " ".repeat(totalWidth - coordWidth - padding);
+        
         System.out.printf("""
                     
-                    =================================================
-                                        TRAFIONY!
-                                           %s
-                    =================================================
-                    """, coord);
+                    ╔═════════════════════════════════════════════════╗
+                    ║                    TRAFIONY!                    ║ 
+                    ║%s%s%s║
+                    ╚═════════════════════════════════════════════════╝
+                    """, leftPad, coord, rightPad);
     }
 
     private void printMove(String moveLine) {
